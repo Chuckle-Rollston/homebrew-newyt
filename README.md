@@ -5,7 +5,8 @@ A terminal YouTube client:
 - **Home** — your own recommended videos (reads your real, logged-in YouTube feed)
 - **Watch Later** — your actual Watch Later playlist
 - **History** — your actual watch history
-- ASCII-art thumbnails, arrow-key navigation
+- **Saved** — a local list you build yourself by pressing `w` on any video (see below)
+- Colored ASCII-art thumbnails, arrow-key navigation
 - Pressing Enter opens the video in a **separate private/incognito browser window, signed out** — playback never touches the YouTube account used to read your feed
 
 ## How it works
@@ -46,18 +47,17 @@ python3 -m playwright install chromium
 
 ### Homebrew (personal tap)
 
-This repo includes `Formula/newyt.rb` for distributing via a personal Homebrew tap.
-To use it:
-
-1. Cut a release tag, e.g. `v0.1.0`, on [Chuckle-Rollston/newyt](https://github.com/Chuckle-Rollston/newyt).
-2. Update `Formula/newyt.rb`'s `sha256` to the checksum of that release tarball
-   (`shasum -a 256 <tarball>`).
-3. Others can then install with:
+This repo is named `homebrew-newyt`, which is Homebrew's naming convention for a
+personal tap repo -- it lets `brew tap Chuckle-Rollston/newyt` resolve automatically
+without needing the full GitHub URL. Install with:
 
 ```bash
-brew tap Chuckle-Rollston/newyt https://github.com/Chuckle-Rollston/newyt
+brew tap Chuckle-Rollston/newyt
 brew install newyt
 ```
+
+To publish a new release: cut a tag (e.g. `v0.1.1`), then update `Formula/newyt.rb`'s
+`url` and `sha256` (`shasum -a 256 <tarball>`) to match.
 
 ## Usage
 
@@ -72,7 +72,8 @@ The first time you read a tab, `newyt` downloads Playwright's Chromium (one-time
 ~150-200MB).
 
 **Keys:** Up/Down move the selection, Left/Right switch tabs, Enter plays the
-selected video privately, `r` refreshes the current tab, `q` quits.
+selected video privately, `w` saves it to the local Saved tab, `r` refreshes the
+current tab, `q` quits.
 
 ## Privacy notes
 
