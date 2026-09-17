@@ -1,12 +1,15 @@
-"""Opens a video in a fresh, private browser window, signed out.
+"""Plays a video without ever loading youtube.com in a browser.
 
 Spawns newyt._playback_worker as a separate detached process (so closing
-or quitting the newyt TUI doesn't close the video window). That worker
-uses its own fresh Playwright browser context -- never the cookies used to
-read the feed/watch-later/history -- and permanently hides the
-related-videos sidebar (immune to the user resizing the window), which a
-plain "open this URL in the OS browser" can't do since YouTube's sidebar
-is shown/hidden by its own responsive JS on every resize.
+or quitting the newyt TUI doesn't stop playback). That worker uses yt-dlp
+to pull the direct video stream and hands it to a native player -- VLC if
+installed (instant streaming start), otherwise downloads the file and
+opens it with the system's default player (e.g. QuickTime Player). This
+never touches the cookies used to read the feed/watch-later/history (so
+it's still "signed out"), and sidesteps YouTube's own web player entirely:
+no ads, no related-videos sidebar, and no exposure to the intermittent
+"There's a problem with playback" errors that can hit an automated
+Chromium mid-video.
 """
 import subprocess
 import sys
@@ -16,4 +19,7 @@ def open_private(url: str) -> None:
     subprocess.Popen(
         [sys.executable, "-m", "newyt._playback_worker", url],
         start_new_session=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        stdin=subprocess.DEVNULL,
     )

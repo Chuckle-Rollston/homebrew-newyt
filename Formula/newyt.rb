@@ -8,6 +8,7 @@ class Newyt < Formula
   license "MIT"
 
   depends_on "python@3.12"
+  depends_on "ffmpeg"
 
   def install
     venv = virtualenv_create(libexec, "python3.12")
@@ -35,11 +36,13 @@ class Newyt < Formula
         newyt
 
       The first time you read a tab, this also downloads Chromium for
-      Playwright (one-time, ~150-200MB).
+      Playwright (one-time, ~150-200MB), used only to read your feed,
+      watch later, and history.
 
-      Your imported session is stored only on this machine and is only used
-      to read your home feed, watch later, and history. Videos always open
-      in a separate private/incognito window, signed out.
+      Playing a video (Enter) never loads youtube.com itself: it uses
+      yt-dlp + ffmpeg (installed as a dependency) to fetch and play the
+      video directly with your default player, or with VLC if installed
+      (instant streaming start, no download wait).
     EOS
   end
 

@@ -7,7 +7,7 @@ A terminal YouTube client:
 - **History** — your actual watch history
 - **Saved** — a local list you build yourself by pressing `w` on any video (see below)
 - Colored ASCII-art thumbnails, arrow-key navigation
-- Pressing Enter opens the video in a **separate private/incognito browser window, signed out** — playback never touches the YouTube account used to read your feed
+- Pressing Enter plays the video **without ever loading youtube.com** — no ads, no related-videos sidebar, no exposure to YouTube's web player, and playback never touches the account used to read your feed
 
 ## How it works
 
@@ -22,14 +22,25 @@ Chromium instance, which `newyt` uses to read `https://www.youtube.com/`, your
 Watch Later playlist, and your history page in the background to build the three
 tabs.
 
-When you press Enter on a video, `newyt` does **not** reuse that session. It opens a
-brand-new, cookie-free Playwright browser window pointed at the video (in a separate
-process, so it stays open after you quit the TUI), so watching never uses or affects
-your signed-in session. That window also has YouTube's related-videos sidebar
-permanently hidden — plain URL tricks (a narrow window, the embed player) don't hold
-up, since YouTube's own JS re-shows the sidebar on resize and its embed player errors
-out on many videos when opened directly, so `newyt` hides it with injected CSS that
-keeps re-applying itself.
+When you press Enter on a video, `newyt` does **not** open youtube.com at all, in any
+browser. Earlier versions played back through a browser window, but a signed-out,
+automation-controlled browser is exactly what YouTube's bot detection is built to
+catch, and it would sometimes error out mid-video ("There's a problem with
+playback"). Instead, `newyt` uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) (a
+well-maintained YouTube extractor, much more robust than scraping the page yourself)
+to fetch the video directly:
+
+- If [VLC](https://www.videolan.org/vlc/) is installed, it streams the video straight
+  into VLC (instant start, no download wait) by giving VLC the separate video and
+  audio stream URLs directly, via VLC's `:input-slave` option -- modern YouTube
+  rarely offers a single muxed file anymore.
+- Otherwise, it downloads the video with [ffmpeg](https://ffmpeg.org/) (installed
+  automatically via Homebrew) merging the video/audio streams into one file, then
+  opens it with your system's default player (QuickTime Player on a stock Mac).
+
+This is a separate detached process (spawned so it keeps running after you quit the
+TUI), never using the cookies from `newyt login`, so playback is genuinely signed out
+either way.
 
 Nothing is sent anywhere except to youtube.com itself — there's no third-party server,
 API key, or account involved beyond your own YouTube login.
@@ -72,8 +83,8 @@ The first time you read a tab, `newyt` downloads Playwright's Chromium (one-time
 ~150-200MB).
 
 **Keys:** Up/Down move the selection, Left/Right switch tabs, Enter plays the
-selected video privately, `w` saves it to the local Saved tab, `r` refreshes the
-current tab, `q` quits.
+selected video (via yt-dlp + VLC/your default player, never youtube.com itself),
+`w` saves it to the local Saved tab, `r` refreshes the current tab, `q` quits.
 
 ## Privacy notes
 
@@ -83,6 +94,10 @@ current tab, `q` quits.
   (macOS) and never leave your machine or get sent anywhere but youtube.com.
 - Fetched video lists are cached locally for 10 minutes (`~/Library/Application
   Support/newyt/cache`) to keep tab-switching fast; press `r` to force a refresh.
+- Videos downloaded for playback (when VLC isn't installed) are kept at
+  `~/Library/Application Support/newyt/downloads` and auto-pruned after 7 days.
+- Playback failures are logged to `~/Library/Application Support/newyt/playback_worker.log`,
+  since that process runs detached with no visible terminal output.
 - Scraping YouTube's own pages instead of using the official Data API means there's
   no API key or quota, but it also means this can break if YouTube changes its page
   structure, and it's against YouTube's Terms of Service to automate a personal

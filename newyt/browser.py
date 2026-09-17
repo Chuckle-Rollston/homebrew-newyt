@@ -2,8 +2,9 @@
 a real, already-logged-in browser (see newyt.cookies). Google blocks the
 interactive sign-in flow inside an automation-controlled browser, so newyt
 never drives that flow itself -- it only ever reuses an existing session.
-Actual video playback always happens separately in a fresh private/
-incognito window via newyt.play, so watching is always signed out.
+Actual video playback happens separately via newyt.play (yt-dlp + a
+native player), which never loads youtube.com or uses these cookies,
+so watching is always signed out.
 """
 import subprocess
 import sys

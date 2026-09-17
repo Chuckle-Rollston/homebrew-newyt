@@ -177,7 +177,7 @@ class App:
                 except curses.error:
                     pass
 
-        status = self.status or "up/down navigate  left/right tabs  enter play (private)  w save to watch later  r refresh  q quit"
+        status = self.status or "up/down navigate  left/right tabs  enter play  w save to watch later  r refresh  q quit"
         try:
             stdscr.addstr(h - 1, 1, status[: max(0, w - 2)])
         except curses.error:
@@ -216,7 +216,7 @@ class App:
             elif key in (curses.KEY_ENTER, 10, 13):
                 if videos and 0 <= self.sel < len(videos):
                     play.open_private(videos[self.sel].url)
-                    self.status = f"Opened privately: {videos[self.sel].title[:50]}"
+                    self.status = f"Playing: {videos[self.sel].title[:50]}"
             elif key == ord("w"):
                 if videos and 0 <= self.sel < len(videos):
                     v = videos[self.sel]

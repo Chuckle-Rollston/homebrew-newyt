@@ -44,7 +44,7 @@ def main() -> None:
         print("(add --browser firefox/brave/edge/safari/opera if you don't use Chrome).")
         print("This reads your existing YouTube session cookies from that browser --")
         print("it's only used to read your home feed, watch later, and history.")
-        print("Videos always play in a separate private/incognito window, signed out.")
+        print("Videos always play via yt-dlp + VLC/your default player, never youtube.com itself.")
         sys.exit(1)
 
     tui_main()
