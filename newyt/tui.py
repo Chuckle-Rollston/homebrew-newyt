@@ -2,7 +2,7 @@ import curses
 import hashlib
 
 from . import browser, play
-from .ascii_art import fetch_thumbnail_ascii
+from .ascii_art import HALF_BLOCK, fetch_thumbnail_ascii, fetch_thumbnail_color_cells
 from .cache import load_cache, save_cache
 from .config import cache_dir
 
@@ -27,6 +27,30 @@ class App:
         curses.use_default_colors()
         curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
         curses.init_pair(2, curses.COLOR_CYAN, -1)
+
+        # Thumbnails: use real color (xterm-256 half-block cells) when the
+        # terminal supports it, falling back to the old grayscale ASCII
+        # shading otherwise. Color pairs are allocated lazily and cached,
+        # since curses needs one pair per distinct (fg, bg) combination.
+        self.use_color = curses.COLORS >= 256
+        self.color_pairs: dict[tuple[int, int], int] = {}
+        self.next_pair = 10
+
+    def _pair_for(self, fg: int, bg: int) -> int:
+        key = (fg, bg)
+        pid = self.color_pairs.get(key)
+        if pid is not None:
+            return pid
+        if self.next_pair >= curses.COLOR_PAIRS:
+            return 0
+        pid = self.next_pair
+        try:
+            curses.init_pair(pid, fg, bg)
+        except curses.error:
+            return 0
+        self.color_pairs[key] = pid
+        self.next_pair += 1
+        return pid
 
     def current_tab(self):
         return TABS[self.tab_index]
@@ -77,7 +101,9 @@ class App:
 
         _name, key, _f = self.current_tab()
         videos = self.videos_by_tab.get(key, [])
-        list_w = max(10, w // 2 - 1)
+        # Give the thumbnail pane most of the width -- the list only needs
+        # enough room for a readable title.
+        list_w = max(20, min(w // 3, 50))
         list_h = h - 4
 
         if not videos and not self.status:
@@ -101,18 +127,41 @@ class App:
         if videos and 0 <= self.sel < len(videos) and w > list_w + 5:
             v = videos[self.sel]
             dx = list_w + 3
-            ascii_w = max(10, min(40, w - dx - 2))
+            avail_w = max(10, w - dx - 2)
+            avail_h = max(4, h - 8)
             cache_path = cache_dir() / (hashlib.sha1(v.thumbnail_url.encode()).hexdigest() + ".jpg")
-            lines = fetch_thumbnail_ascii(v.thumbnail_url, cache_path, width=ascii_w, height=14)
             row = 2
-            for l in lines:
-                if row >= h - 6:
-                    break
-                try:
-                    stdscr.addstr(row, dx, l)
-                except curses.error:
-                    pass
-                row += 1
+
+            cells = fetch_thumbnail_color_cells(
+                v.thumbnail_url, cache_path, width=min(90, avail_w), height=min(35, avail_h)
+            ) if self.use_color else None
+
+            if cells:
+                for cell_row in cells:
+                    if row >= h - 6:
+                        break
+                    col = dx
+                    for fg, bg in cell_row:
+                        if col >= w - 1:
+                            break
+                        try:
+                            stdscr.addstr(row, col, HALF_BLOCK, curses.color_pair(self._pair_for(fg, bg)))
+                        except curses.error:
+                            pass
+                        col += 1
+                    row += 1
+            else:
+                lines = fetch_thumbnail_ascii(
+                    v.thumbnail_url, cache_path, width=min(70, avail_w), height=min(30, avail_h)
+                )
+                for l in lines:
+                    if row >= h - 6:
+                        break
+                    try:
+                        stdscr.addstr(row, dx, l)
+                    except curses.error:
+                        pass
+                    row += 1
             info_y = row + 1
             for j, text in enumerate((v.title, v.channel, v.duration)):
                 try:
