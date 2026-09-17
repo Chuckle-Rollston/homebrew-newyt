@@ -2,7 +2,7 @@ import curses
 import hashlib
 
 from . import browser, play
-from .ascii_art import HALF_BLOCK, fetch_thumbnail_ascii, fetch_thumbnail_color_cells
+from .ascii_art import fetch_thumbnail_ascii, fetch_thumbnail_color_cells
 from .cache import load_cache, save_cache
 from .config import cache_dir
 
@@ -141,11 +141,11 @@ class App:
                     if row >= h - 6:
                         break
                     col = dx
-                    for fg, bg in cell_row:
+                    for char, fg in cell_row:
                         if col >= w - 1:
                             break
                         try:
-                            stdscr.addstr(row, col, HALF_BLOCK, curses.color_pair(self._pair_for(fg, bg)))
+                            stdscr.addstr(row, col, char, curses.color_pair(self._pair_for(fg, -1)))
                         except curses.error:
                             pass
                         col += 1

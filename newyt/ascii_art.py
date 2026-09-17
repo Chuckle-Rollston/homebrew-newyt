@@ -6,12 +6,6 @@ from PIL import Image
 
 CHARS = " .:-=+*#%@"
 
-# The upper-half-block character lets one terminal cell show two image
-# pixels (foreground color = top pixel, background color = bottom pixel),
-# doubling vertical resolution for the same number of rows -- the same
-# trick terminal image viewers like chafa/viu use.
-HALF_BLOCK = "▀"
-
 
 def _fetch_bytes(url: str, cache_path: Path) -> "bytes | None":
     if not url:
@@ -53,21 +47,23 @@ def image_to_ascii(img_bytes: bytes, width: int = 40, height: int = 18) -> list[
     return lines
 
 
-def image_to_color_cells(img_bytes: bytes, width: int = 60, height: int = 24) -> list[list[tuple[int, int]]]:
-    """Returns `height` rows of `width` (fg_xterm256, bg_xterm256) pairs, each
-    cell meant to be rendered as HALF_BLOCK. Samples at double the row count
-    (2 image pixels per cell) for the half-block trick.
+def image_to_ascii_color_cells(img_bytes: bytes, width: int = 60, height: int = 28) -> list[list[tuple[str, int]]]:
+    """Returns `height` rows of `width` (char, fg_xterm256) pairs: a real
+    ASCII glyph chosen by pixel brightness (same ramp as image_to_ascii),
+    colored by that pixel's actual color.
     """
-    img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-    img = img.resize((width, height * 2))
-    px = img.load()
+    color_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+    color_img = color_img.resize((width, height))
+    gray_img = color_img.convert("L")
+    color_px = color_img.load()
+    gray_px = gray_img.load()
     rows = []
     for j in range(height):
         row = []
         for i in range(width):
-            top = px[i, j * 2]
-            bottom = px[i, j * 2 + 1]
-            row.append((rgb_to_xterm256(*top), rgb_to_xterm256(*bottom)))
+            brightness = gray_px[i, j]
+            char = CHARS[brightness * (len(CHARS) - 1) // 255]
+            row.append((char, rgb_to_xterm256(*color_px[i, j])))
         rows.append(row)
     return rows
 
@@ -83,12 +79,12 @@ def fetch_thumbnail_ascii(url: str, cache_path: Path, width: int = 40, height: i
 
 
 def fetch_thumbnail_color_cells(
-    url: str, cache_path: Path, width: int = 60, height: int = 24
-) -> "list[list[tuple[int, int]]] | None":
+    url: str, cache_path: Path, width: int = 60, height: int = 28
+) -> "list[list[tuple[str, int]]] | None":
     data = _fetch_bytes(url, cache_path)
     if data is None:
         return None
     try:
-        return image_to_color_cells(data, width, height)
+        return image_to_ascii_color_cells(data, width, height)
     except Exception:
         return None
