@@ -8,7 +8,7 @@ class Newyt < Formula
   #   curl -L -o newyt.tar.gz https://github.com/Chuckle-Rollston/newyt/archive/refs/tags/v0.1.0.tar.gz
   #   shasum -a 256 newyt.tar.gz
   url "https://github.com/Chuckle-Rollston/newyt/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "REPLACE_WITH_REAL_SHA256"
+  sha256 "e34f9eba3d567f253a2d2aae5513adf0744fe763dbd743530f8a3e77aea5eb27"
   license "MIT"
 
   depends_on "python@3.12"
