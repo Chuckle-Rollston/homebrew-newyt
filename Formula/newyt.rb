@@ -4,7 +4,7 @@ class Newyt < Formula
   desc "Terminal YouTube client: your feed, watch later, and history with ASCII thumbnails"
   homepage "https://github.com/Chuckle-Rollston/newyt"
   url "https://github.com/Chuckle-Rollston/newyt/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "e91378f1af1fa8a6a44b61606b4dd3aec0ee40e4fbf18b8dc241a227b1dd3110"
+  sha256 "c41692c0d66b1bf26afa89f7d5c58668744ebbfa70eed1f429a08a22ef4525ca"
   license "MIT"
 
   depends_on "python@3.12"
