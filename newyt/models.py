@@ -8,6 +8,7 @@ class Video:
     channel: str = ""
     duration: str = ""
     thumbnail_url: str = ""
+    local_path: str = ""
 
     @property
     def url(self) -> str:

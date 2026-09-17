@@ -40,9 +40,10 @@ class Newyt < Formula
       watch later, and history.
 
       Playing a video (Enter) never loads youtube.com itself: it uses
-      yt-dlp + ffmpeg (installed as a dependency) to fetch and play the
-      video directly with your default player, or with VLC if installed
-      (instant streaming start, no download wait).
+      yt-dlp + ffmpeg (installed as a dependency) to download the video
+      to ~/Desktop/youtube videos (with a live progress bar) and open it
+      with your default player. Every video you play stays there and
+      shows up in the Downloaded tab afterward.
     EOS
   end
 

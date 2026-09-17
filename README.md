@@ -6,8 +6,9 @@ A terminal YouTube client:
 - **Watch Later** — your actual Watch Later playlist
 - **History** — your actual watch history
 - **Saved** — a local list you build yourself by pressing `w` on any video (see below)
+- **Downloaded** — every video you've played, saved permanently to `~/Desktop/youtube videos`
 - Colored ASCII-art thumbnails, arrow-key navigation
-- Pressing Enter plays the video **without ever loading youtube.com** — no ads, no related-videos sidebar, no exposure to YouTube's web player, and playback never touches the account used to read your feed
+- Pressing Enter downloads and plays the video **without ever loading youtube.com** — no ads, no related-videos sidebar, no exposure to YouTube's web player, and playback never touches the account used to read your feed — with a live progress bar while it downloads
 
 ## How it works
 
@@ -28,19 +29,18 @@ automation-controlled browser is exactly what YouTube's bot detection is built t
 catch, and it would sometimes error out mid-video ("There's a problem with
 playback"). Instead, `newyt` uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) (a
 well-maintained YouTube extractor, much more robust than scraping the page yourself)
-to fetch the video directly:
+to download the video to `~/Desktop/youtube videos`, merging the separate video and
+audio streams via [ffmpeg](https://ffmpeg.org/) (installed automatically via
+Homebrew) -- modern YouTube rarely offers a single muxed file anymore -- then opens
+it with your system's default player (QuickTime Player on a stock Mac) once it's
+done.
 
-- If [VLC](https://www.videolan.org/vlc/) is installed, it streams the video straight
-  into VLC (instant start, no download wait) by giving VLC the separate video and
-  audio stream URLs directly, via VLC's `:input-slave` option -- modern YouTube
-  rarely offers a single muxed file anymore.
-- Otherwise, it downloads the video with [ffmpeg](https://ffmpeg.org/) (installed
-  automatically via Homebrew) merging the video/audio streams into one file, then
-  opens it with your system's default player (QuickTime Player on a stock Mac).
-
-This is a separate detached process (spawned so it keeps running after you quit the
-TUI), never using the cookies from `newyt login`, so playback is genuinely signed out
-either way.
+This all happens in a separate detached process (spawned so it keeps running after
+you quit the TUI), which reports progress back to the TUI as a live progress bar in
+the status line, and never uses the cookies from `newyt login`, so playback is
+genuinely signed out. Every video you play gets kept in the **Downloaded** tab
+afterward -- pressing Enter there opens the file straight from disk instead of
+re-downloading it.
 
 Nothing is sent anywhere except to youtube.com itself — there's no third-party server,
 API key, or account involved beyond your own YouTube login.
@@ -82,8 +82,8 @@ newyt logout                   # forgets the imported session
 The first time you read a tab, `newyt` downloads Playwright's Chromium (one-time,
 ~150-200MB).
 
-**Keys:** Up/Down move the selection, Left/Right switch tabs, Enter plays the
-selected video (via yt-dlp + VLC/your default player, never youtube.com itself),
+**Keys:** Up/Down move the selection, Left/Right switch tabs, Enter downloads and
+plays the selected video (or opens it straight from disk on the Downloaded tab),
 `w` saves it to the local Saved tab, `r` refreshes the current tab, `q` quits.
 
 ## Privacy notes
@@ -94,8 +94,10 @@ selected video (via yt-dlp + VLC/your default player, never youtube.com itself),
   (macOS) and never leave your machine or get sent anywhere but youtube.com.
 - Fetched video lists are cached locally for 10 minutes (`~/Library/Application
   Support/newyt/cache`) to keep tab-switching fast; press `r` to force a refresh.
-- Videos downloaded for playback (when VLC isn't installed) are kept at
-  `~/Library/Application Support/newyt/downloads` and auto-pruned after 7 days.
+- Every video you play is downloaded and kept permanently at
+  `~/Desktop/youtube videos` (visible in the Downloaded tab) -- nothing is
+  auto-deleted, so that folder will grow with use; delete files from it yourself
+  if you want them gone (they'll drop out of the Downloaded tab automatically).
 - Playback failures are logged to `~/Library/Application Support/newyt/playback_worker.log`,
   since that process runs detached with no visible terminal output.
 - Scraping YouTube's own pages instead of using the official Data API means there's

@@ -22,3 +22,13 @@ def data_cache_file(name: str) -> Path:
     d = config_dir() / "cache"
     d.mkdir(parents=True, exist_ok=True)
     return d / f"{name}.json"
+
+
+def downloads_dir() -> Path:
+    d = Path.home() / "Desktop" / "youtube videos"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def download_progress_file() -> Path:
+    return config_dir() / "download_progress.json"

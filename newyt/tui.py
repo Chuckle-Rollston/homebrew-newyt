@@ -1,18 +1,20 @@
 import curses
 import hashlib
+import json
 
-from . import browser, play, saved
+from . import browser, downloaded, play, saved
 from .ascii_art import fetch_thumbnail_ascii, fetch_thumbnail_color_cells
 from .cache import load_cache, save_cache
-from .config import cache_dir
+from .config import cache_dir, download_progress_file
 
 TABS = [
     ("Home", "home", browser.fetch_home),
     ("Watch Later", "watch_later", browser.fetch_watch_later),
     ("History", "history", browser.fetch_history),
     ("Saved", "saved", saved.load),
+    ("Downloaded", "downloaded", downloaded.load),
 ]
-LOCAL_TABS = {"saved"}
+LOCAL_TABS = {"saved", "downloaded"}
 
 
 class App:
@@ -57,13 +59,39 @@ class App:
     def current_tab(self):
         return TABS[self.tab_index]
 
-    def load_tab(self, force: bool = False) -> None:
+    def _read_progress(self) -> "dict | None":
+        f = download_progress_file()
+        if not f.exists():
+            return None
+        try:
+            return json.loads(f.read_text())
+        except Exception:
+            return None
+
+    def _format_progress(self, progress: dict, width: int = 30) -> str:
+        title = (progress.get("title") or "")[:40]
+        status = progress.get("status")
+        if status == "downloading":
+            pct = progress.get("percent")
+            if pct is None:
+                return f"Downloading: {title} (size unknown)..."
+            filled = max(0, min(width, int(width * pct / 100)))
+            bar = "#" * filled + "-" * (width - filled)
+            return f"Downloading: {title} [{bar}] {pct:.0f}%"
+        if status == "merging":
+            return f"Merging: {title}..."
+        if status == "finished":
+            return f"Downloaded: {title} -- opening..."
+        return f"{title}: {status}"
+
+    def load_tab(self, force: bool = False, clear_status: bool = True) -> None:
         name, key, fetcher = self.current_tab()
         if key in LOCAL_TABS:
-            # Purely local data (the Saved list) -- always cheap, always
+            # Purely local data (Saved/Downloaded) -- always cheap, always
             # fresh, no network fetch or disk cache needed.
             self.videos_by_tab[key] = fetcher()
-            self.status = ""
+            if clear_status:
+                self.status = ""
             return
         if not force and key in self.videos_by_tab:
             return
@@ -177,18 +205,35 @@ class App:
                 except curses.error:
                     pass
 
-        status = self.status or "up/down navigate  left/right tabs  enter play  w save to watch later  r refresh  q quit"
+        progress = self._read_progress()
+        if progress:
+            status = self._format_progress(progress, width=max(10, min(40, w - 30)))
+            status_attr = curses.color_pair(2)
+        else:
+            status = self.status or "up/down navigate  left/right tabs  enter play  w save to watch later  r refresh  q quit"
+            status_attr = curses.A_NORMAL
         try:
-            stdscr.addstr(h - 1, 1, status[: max(0, w - 2)])
+            stdscr.addstr(h - 1, 1, status[: max(0, w - 2)], status_attr)
         except curses.error:
             pass
         stdscr.refresh()
 
     def run(self) -> None:
+        # A short timeout (rather than blocking indefinitely) lets the loop
+        # keep redrawing -- and so polling the download-progress file --
+        # even while the user isn't pressing anything.
+        self.stdscr.timeout(300)
         self.load_tab()
         while True:
+            # Keep local tabs (Saved/Downloaded) live: cheap local reads, so
+            # just re-read on every idle tick rather than tracking when a
+            # background download finished.
+            if self.current_tab()[1] in LOCAL_TABS:
+                self.load_tab(clear_status=False)
             self.draw()
             key = self.stdscr.getch()
+            if key == -1:
+                continue
             videos = self.videos_by_tab.get(self.current_tab()[1], [])
 
             if key in (curses.KEY_UP, ord("k")):
@@ -215,8 +260,15 @@ class App:
                 self.load_tab()
             elif key in (curses.KEY_ENTER, 10, 13):
                 if videos and 0 <= self.sel < len(videos):
-                    play.open_private(videos[self.sel].url)
-                    self.status = f"Playing: {videos[self.sel].title[:50]}"
+                    v = videos[self.sel]
+                    if v.local_path:
+                        # Already downloaded (the Downloaded tab) -- open
+                        # the file directly instead of re-downloading.
+                        play.open_local_file(v.local_path)
+                        self.status = f"Playing (downloaded): {v.title[:50]}"
+                    else:
+                        play.open_private(v.url)
+                        self.status = f"Downloading & playing: {v.title[:50]}"
             elif key == ord("w"):
                 if videos and 0 <= self.sel < len(videos):
                     v = videos[self.sel]
