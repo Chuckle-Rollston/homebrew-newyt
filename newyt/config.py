@@ -12,12 +12,6 @@ def config_dir() -> Path:
     return base
 
 
-def profile_dir() -> Path:
-    d = config_dir() / "browser-profile"
-    d.mkdir(parents=True, exist_ok=True)
-    return d
-
-
 def cache_dir() -> Path:
     d = config_dir() / "cache" / "thumbs"
     d.mkdir(parents=True, exist_ok=True)

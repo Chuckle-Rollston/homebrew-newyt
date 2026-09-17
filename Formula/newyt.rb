@@ -26,19 +26,20 @@ class Newyt < Formula
 
   def caveats
     <<~EOS
-      Before first use, log in to YouTube:
+      Before first use, import your YouTube session from a browser you're
+      already signed into (default: Chrome; add --browser firefox/brave/
+      edge/safari/opera for another one):
         newyt login
-
-      This opens a real browser window once so you can sign in, and will
-      also download the Chromium browser Playwright needs (one-time,
-      ~150-200MB) if it isn't already present.
 
       Then launch the app:
         newyt
 
-      Your login is stored only in a local browser profile on this machine
-      and is only used to read your home feed, watch later, and history.
-      Videos always open in a separate private/incognito window, signed out.
+      The first time you read a tab, this also downloads Chromium for
+      Playwright (one-time, ~150-200MB).
+
+      Your imported session is stored only on this machine and is only used
+      to read your home feed, watch later, and history. Videos always open
+      in a separate private/incognito window, signed out.
     EOS
   end
 

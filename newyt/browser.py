@@ -1,13 +1,14 @@
-"""Reads the signed-in user's own YouTube pages via a persistent, local
-Playwright browser profile. This profile is only ever used to READ pages
-(home feed, watch later, history) -- actual video playback always happens
-in a separate private/incognito window via newyt.play, so watching is
-signed out and doesn't touch this profile or its recommendations.
+"""Reads the signed-in user's own YouTube pages using cookies imported from
+a real, already-logged-in browser (see newyt.cookies). Google blocks the
+interactive sign-in flow inside an automation-controlled browser, so newyt
+never drives that flow itself -- it only ever reuses an existing session.
+Actual video playback always happens separately in a fresh private/
+incognito window via newyt.play, so watching is always signed out.
 """
 import subprocess
 import sys
 
-from .config import profile_dir
+from . import cookies as cookies_mod
 from .extract import extract_videos
 from .models import Video
 
@@ -35,8 +36,7 @@ def _import_playwright():
 
 
 def is_logged_in() -> bool:
-    d = profile_dir()
-    return d.exists() and any(d.iterdir())
+    return cookies_mod.load() is not None
 
 
 def _install_chromium() -> None:
@@ -49,35 +49,35 @@ def _install_chromium() -> None:
         )
 
 
-def _launch_persistent(p, headless: bool):
+def _launch(p, headless: bool):
     try:
-        return p.chromium.launch_persistent_context(
-            str(profile_dir()), headless=headless, viewport={"width": 1280, "height": 900}
-        )
+        return p.chromium.launch(headless=headless)
     except Exception:
         _install_chromium()
-        return p.chromium.launch_persistent_context(
-            str(profile_dir()), headless=headless, viewport={"width": 1280, "height": 900}
+        return p.chromium.launch(headless=headless)
+
+
+def login(browser_name: str = "chrome") -> int:
+    """Imports YouTube cookies from the given browser. Returns the cookie count."""
+    imported = cookies_mod.extract(browser_name)
+    if not imported:
+        raise NotLoggedIn(
+            f"No YouTube cookies found in {browser_name}. Make sure you're signed "
+            f"into youtube.com there, then try again."
         )
-
-
-def login() -> None:
-    sync_playwright = _import_playwright()
-    with sync_playwright() as p:
-        ctx = _launch_persistent(p, headless=False)
-        page = ctx.new_page()
-        page.goto("https://accounts.google.com/ServiceLogin?service=youtube&continue=https://www.youtube.com/")
-        print("A browser window opened. Log in to your YouTube account there.")
-        input("Press Enter here once you're logged in (this closes the window)... ")
-        ctx.close()
+    cookies_mod.save(imported)
+    return len(imported)
 
 
 def _fetch(url: str, keys) -> list[Video]:
-    if not is_logged_in():
+    saved = cookies_mod.load()
+    if not saved:
         raise NotLoggedIn("Not logged in. Run `newyt login` first.")
     sync_playwright = _import_playwright()
     with sync_playwright() as p:
-        ctx = _launch_persistent(p, headless=True)
+        browser = _launch(p, headless=True)
+        ctx = browser.new_context(viewport={"width": 1280, "height": 900})
+        ctx.add_cookies(saved)
         page = ctx.new_page()
         page.goto(url, wait_until="networkidle", timeout=30000)
         page.wait_for_timeout(1200)
@@ -86,6 +86,7 @@ def _fetch(url: str, keys) -> list[Video]:
         except Exception:
             data = None
         ctx.close()
+        browser.close()
     if not data:
         return []
     return extract_videos(data, keys)

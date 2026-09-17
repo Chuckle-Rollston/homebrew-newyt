@@ -10,12 +10,18 @@ A terminal YouTube client:
 
 ## How it works
 
-`newyt` uses [Playwright](https://playwright.dev/) to drive a small, local, persistent
-Chromium profile that only you control. You log in once (`newyt login`); after that,
-`newyt` reads `https://www.youtube.com/`, your Watch Later playlist, and your history
-page from that profile in the background to build the three tabs.
+Google blocks the interactive sign-in flow inside an automation-controlled browser
+(Playwright/Selenium), so `newyt` never tries to log in for you. Instead, `newyt login`
+imports your existing YouTube session cookies from a real browser you're already
+signed into (Chrome by default; `--browser firefox/brave/edge/safari/opera` for
+others) — the same technique tools like `yt-dlp --cookies-from-browser` use.
 
-When you press Enter on a video, `newyt` does **not** reuse that profile. It launches
+Those cookies are stored locally and handed to a headless [Playwright](https://playwright.dev/)
+Chromium instance, which `newyt` uses to read `https://www.youtube.com/`, your
+Watch Later playlist, and your history page in the background to build the three
+tabs.
+
+When you press Enter on a video, `newyt` does **not** reuse that session. It launches
 your real installed browser (Chrome/Brave/Edge/Firefox) in a fresh incognito/private
 window pointed at the video, so watching never uses or affects your signed-in session.
 
@@ -48,25 +54,27 @@ brew tap Chuckle-Rollston/newyt https://github.com/Chuckle-Rollston/newyt
 brew install newyt
 ```
 
-(Installing bundles a Chromium download via Playwright, so first install takes a
-minute or two.)
-
 ## Usage
 
 ```bash
-newyt login    # opens a real browser window once, log into YouTube there
-newyt          # launches the terminal app
-newyt logout   # forgets the saved login
+newyt login                    # imports your YouTube session from Chrome
+newyt login --browser firefox  # ...or another browser
+newyt                          # launches the terminal app
+newyt logout                   # forgets the imported session
 ```
+
+The first time you read a tab, `newyt` downloads Playwright's Chromium (one-time,
+~150-200MB).
 
 **Keys:** Up/Down move the selection, Left/Right switch tabs, Enter plays the
 selected video privately, `r` refreshes the current tab, `q` quits.
 
 ## Privacy notes
 
-- The browser profile used to read your feed lives at
-  `~/Library/Application Support/newyt/browser-profile` (macOS) and never leaves
-  your machine.
+- Your browser's cookie store is protected by the OS (e.g. macOS Keychain for
+  Chrome); the first `newyt login` may prompt you to allow access.
+- Imported cookies are stored locally at `~/Library/Application Support/newyt/cookies.json`
+  (macOS) and never leave your machine or get sent anywhere but youtube.com.
 - Fetched video lists are cached locally for 10 minutes (`~/Library/Application
   Support/newyt/cache`) to keep tab-switching fast; press `r` to force a refresh.
 - Scraping YouTube's own pages instead of using the official Data API means there's
