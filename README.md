@@ -21,9 +21,14 @@ Chromium instance, which `newyt` uses to read `https://www.youtube.com/`, your
 Watch Later playlist, and your history page in the background to build the three
 tabs.
 
-When you press Enter on a video, `newyt` does **not** reuse that session. It launches
-your real installed browser (Chrome/Brave/Edge/Firefox) in a fresh incognito/private
-window pointed at the video, so watching never uses or affects your signed-in session.
+When you press Enter on a video, `newyt` does **not** reuse that session. It opens a
+brand-new, cookie-free Playwright browser window pointed at the video (in a separate
+process, so it stays open after you quit the TUI), so watching never uses or affects
+your signed-in session. That window also has YouTube's related-videos sidebar
+permanently hidden — plain URL tricks (a narrow window, the embed player) don't hold
+up, since YouTube's own JS re-shows the sidebar on resize and its embed player errors
+out on many videos when opened directly, so `newyt` hides it with injected CSS that
+keeps re-applying itself.
 
 Nothing is sent anywhere except to youtube.com itself — there's no third-party server,
 API key, or account involved beyond your own YouTube login.
