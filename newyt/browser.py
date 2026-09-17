@@ -4,6 +4,9 @@ Playwright browser profile. This profile is only ever used to READ pages
 in a separate private/incognito window via newyt.play, so watching is
 signed out and doesn't touch this profile or its recommendations.
 """
+import subprocess
+import sys
+
 from .config import profile_dir
 from .extract import extract_videos
 from .models import Video
@@ -36,18 +39,32 @@ def is_logged_in() -> bool:
     return d.exists() and any(d.iterdir())
 
 
+def _install_chromium() -> None:
+    print("Downloading Chromium for Playwright (one-time, ~150-200MB)...")
+    result = subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"])
+    if result.returncode != 0:
+        raise BrowserNotInstalled(
+            "Couldn't download Chromium automatically. Try running:\n"
+            f"  {sys.executable} -m playwright install chromium"
+        )
+
+
+def _launch_persistent(p, headless: bool):
+    try:
+        return p.chromium.launch_persistent_context(
+            str(profile_dir()), headless=headless, viewport={"width": 1280, "height": 900}
+        )
+    except Exception:
+        _install_chromium()
+        return p.chromium.launch_persistent_context(
+            str(profile_dir()), headless=headless, viewport={"width": 1280, "height": 900}
+        )
+
+
 def login() -> None:
     sync_playwright = _import_playwright()
     with sync_playwright() as p:
-        try:
-            ctx = p.chromium.launch_persistent_context(
-                str(profile_dir()), headless=False, viewport={"width": 1280, "height": 900}
-            )
-        except Exception as e:
-            raise BrowserNotInstalled(
-                "Chromium isn't installed for Playwright yet. Run:\n"
-                "  python3 -m playwright install chromium"
-            ) from e
+        ctx = _launch_persistent(p, headless=False)
         page = ctx.new_page()
         page.goto("https://accounts.google.com/ServiceLogin?service=youtube&continue=https://www.youtube.com/")
         print("A browser window opened. Log in to your YouTube account there.")
@@ -60,15 +77,7 @@ def _fetch(url: str, keys) -> list[Video]:
         raise NotLoggedIn("Not logged in. Run `newyt login` first.")
     sync_playwright = _import_playwright()
     with sync_playwright() as p:
-        try:
-            ctx = p.chromium.launch_persistent_context(
-                str(profile_dir()), headless=True, viewport={"width": 1280, "height": 900}
-            )
-        except Exception as e:
-            raise BrowserNotInstalled(
-                "Chromium isn't installed for Playwright yet. Run:\n"
-                "  python3 -m playwright install chromium"
-            ) from e
+        ctx = _launch_persistent(p, headless=True)
         page = ctx.new_page()
         page.goto(url, wait_until="networkidle", timeout=30000)
         page.wait_for_timeout(1200)
