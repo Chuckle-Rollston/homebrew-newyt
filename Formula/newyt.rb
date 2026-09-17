@@ -2,12 +2,12 @@ class Newyt < Formula
   include Language::Python::Virtualenv
 
   desc "Terminal YouTube client: your feed, watch later, and history with ASCII thumbnails"
-  homepage "https://github.com/YOUR_GITHUB_USERNAME/newyt"
-  # Once you've pushed this repo to GitHub and cut a release tag (e.g. v0.1.0),
-  # replace the url/sha256 below with the real tarball and its checksum:
-  #   curl -L -o newyt.tar.gz https://github.com/YOUR_GITHUB_USERNAME/newyt/archive/refs/tags/v0.1.0.tar.gz
+  homepage "https://github.com/Chuckle-Rollston/newyt"
+  # Once you've cut a release tag (e.g. v0.1.0), replace the sha256 below with
+  # the real checksum:
+  #   curl -L -o newyt.tar.gz https://github.com/Chuckle-Rollston/newyt/archive/refs/tags/v0.1.0.tar.gz
   #   shasum -a 256 newyt.tar.gz
-  url "https://github.com/YOUR_GITHUB_USERNAME/newyt/archive/refs/tags/v0.1.0.tar.gz"
+  url "https://github.com/Chuckle-Rollston/newyt/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "REPLACE_WITH_REAL_SHA256"
   license "MIT"
 

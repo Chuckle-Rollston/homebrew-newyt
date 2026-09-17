@@ -38,13 +38,13 @@ python3 -m playwright install chromium
 This repo includes `Formula/newyt.rb` for distributing via a personal Homebrew tap.
 To use it:
 
-1. Push this repo to GitHub and cut a release tag, e.g. `v0.1.0`.
-2. Update `Formula/newyt.rb`: set `homepage`/`url` to your repo, and `sha256` to the
-   checksum of the release tarball (`shasum -a 256 <tarball>`).
+1. Cut a release tag, e.g. `v0.1.0`, on [Chuckle-Rollston/newyt](https://github.com/Chuckle-Rollston/newyt).
+2. Update `Formula/newyt.rb`'s `sha256` to the checksum of that release tarball
+   (`shasum -a 256 <tarball>`).
 3. Others can then install with:
 
 ```bash
-brew tap YOUR_GITHUB_USERNAME/newyt https://github.com/YOUR_GITHUB_USERNAME/newyt
+brew tap Chuckle-Rollston/newyt https://github.com/Chuckle-Rollston/newyt
 brew install newyt
 ```
 
