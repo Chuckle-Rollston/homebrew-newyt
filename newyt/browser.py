@@ -69,7 +69,7 @@ def login(browser_name: str = "chrome") -> int:
     return len(imported)
 
 
-def _fetch(url: str, keys) -> list[Video]:
+def _fetch(url: str, keys=None) -> list[Video]:
     saved = cookies_mod.load()
     if not saved:
         raise NotLoggedIn("Not logged in. Run `newyt login` first.")
@@ -79,10 +79,17 @@ def _fetch(url: str, keys) -> list[Video]:
         ctx = browser.new_context(viewport={"width": 1280, "height": 900})
         ctx.add_cookies(saved)
         page = ctx.new_page()
-        page.goto(url, wait_until="networkidle", timeout=30000)
-        page.wait_for_timeout(1200)
+        # YouTube keeps background connections open indefinitely (websockets,
+        # analytics, autoplay previews), so it never reaches "networkidle" --
+        # wait for the DOM instead.
+        page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        page.wait_for_timeout(1500)
         try:
-            data = page.evaluate("() => window.ytInitialData")
+            # window.ytInitialData is a static snapshot that on several pages
+            # (home, history) only has skeleton placeholders until the client
+            # hydrates real content into the <ytd-app> component tree -- read
+            # that live component state instead.
+            data = page.evaluate("() => { const app = document.querySelector('ytd-app'); return app ? app.data : null; }")
         except Exception:
             data = None
         ctx.close()
@@ -93,12 +100,12 @@ def _fetch(url: str, keys) -> list[Video]:
 
 
 def fetch_home() -> list[Video]:
-    return _fetch(HOME_URL, ("videoRenderer",))
+    return _fetch(HOME_URL)
 
 
 def fetch_watch_later() -> list[Video]:
-    return _fetch(WATCH_LATER_URL, ("playlistVideoRenderer",))
+    return _fetch(WATCH_LATER_URL)
 
 
 def fetch_history() -> list[Video]:
-    return _fetch(HISTORY_URL, ("videoRenderer",))
+    return _fetch(HISTORY_URL)
