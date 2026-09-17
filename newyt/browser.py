@@ -21,6 +21,10 @@ class NotLoggedIn(Exception):
     pass
 
 
+class SessionExpired(NotLoggedIn):
+    pass
+
+
 class BrowserNotInstalled(Exception):
     pass
 
@@ -92,8 +96,21 @@ def _fetch(url: str, keys=None) -> list[Video]:
             data = page.evaluate("() => { const app = document.querySelector('ytd-app'); return app ? app.data : null; }")
         except Exception:
             data = None
+        try:
+            # The imported cookies can go stale (short-lived token rotation,
+            # or Google invalidating the session over repeated automated
+            # access) -- when that happens the page just silently renders
+            # signed out instead of erroring, so check for it explicitly
+            # rather than showing an empty tab with no explanation.
+            signed_in = page.evaluate("() => !!document.querySelector('#avatar-btn')")
+        except Exception:
+            signed_in = True
         ctx.close()
         browser.close()
+    if not signed_in:
+        raise SessionExpired(
+            "Your imported YouTube session looks expired or invalid. Run `newyt login` again."
+        )
     if not data:
         return []
     return extract_videos(data, keys)

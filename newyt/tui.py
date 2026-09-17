@@ -43,6 +43,9 @@ class App:
         self.draw()
         try:
             videos = fetcher()
+        except browser.SessionExpired:
+            self.status = "Session expired. Quit and run `newyt login` again."
+            videos = []
         except browser.NotLoggedIn:
             self.status = "Not logged in. Quit and run `newyt login` first."
             videos = []
