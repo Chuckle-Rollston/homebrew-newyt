@@ -1,7 +1,7 @@
 import curses
 import hashlib
 
-from . import browser, play
+from . import browser, play, saved
 from .ascii_art import fetch_thumbnail_ascii, fetch_thumbnail_color_cells
 from .cache import load_cache, save_cache
 from .config import cache_dir
@@ -10,7 +10,9 @@ TABS = [
     ("Home", "home", browser.fetch_home),
     ("Watch Later", "watch_later", browser.fetch_watch_later),
     ("History", "history", browser.fetch_history),
+    ("Saved", "saved", saved.load),
 ]
+LOCAL_TABS = {"saved"}
 
 
 class App:
@@ -57,6 +59,12 @@ class App:
 
     def load_tab(self, force: bool = False) -> None:
         name, key, fetcher = self.current_tab()
+        if key in LOCAL_TABS:
+            # Purely local data (the Saved list) -- always cheap, always
+            # fresh, no network fetch or disk cache needed.
+            self.videos_by_tab[key] = fetcher()
+            self.status = ""
+            return
         if not force and key in self.videos_by_tab:
             return
         cached = None if force else load_cache(key)
@@ -169,7 +177,7 @@ class App:
                 except curses.error:
                     pass
 
-        status = self.status or "up/down navigate  left/right tabs  enter play (private)  r refresh  q quit"
+        status = self.status or "up/down navigate  left/right tabs  enter play (private)  w save to watch later  r refresh  q quit"
         try:
             stdscr.addstr(h - 1, 1, status[: max(0, w - 2)])
         except curses.error:
@@ -209,6 +217,12 @@ class App:
                 if videos and 0 <= self.sel < len(videos):
                     play.open_private(videos[self.sel].url)
                     self.status = f"Opened privately: {videos[self.sel].title[:50]}"
+            elif key == ord("w"):
+                if videos and 0 <= self.sel < len(videos):
+                    v = videos[self.sel]
+                    added = saved.add(v)
+                    self.videos_by_tab.pop("saved", None)
+                    self.status = (f"Saved: {v.title[:50]}" if added else f"Already saved: {v.title[:50]}")
             elif key == ord("r"):
                 self.load_tab(force=True)
             elif key == ord("q"):
