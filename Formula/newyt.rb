@@ -11,14 +11,17 @@ class Newyt < Formula
 
   def install
     venv = virtualenv_create(libexec, "python3.12")
-    # Homebrew's Language::Python::Virtualenv resource helpers force
-    # --no-binary, which requires source builds (and drags in a cmake/ninja
-    # toolchain for packages like greenlet/pillow). This tap installs
-    # straight from PyPI instead, restricted to prebuilt wheels only, so no
-    # compiler is ever needed.
-    system venv.root/"bin/pip", "install", "-v",
-           "--only-binary=:all:",
+    # venv is created --without-pip, so install via the outer interpreter's
+    # pip pointed at the venv (Homebrew's own pattern), not a nonexistent
+    # libexec/bin/pip. Homebrew's resource/pip_install helpers always force
+    # --no-binary (source builds, dragging in a cmake/ninja toolchain for
+    # packages like greenlet/pillow), so install straight from PyPI instead,
+    # restricted to prebuilt wheels only, so no compiler is ever needed.
+    python = Formula["python@3.12"].opt_bin/"python3.12"
+    system python, "-m", "pip", "--python=#{venv.root}/bin/python",
+           "install", "--verbose", "--only-binary=:all:",
            buildpath
+    bin.install_symlink venv.root/"bin/newyt"
   end
 
   def caveats
